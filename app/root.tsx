@@ -9,6 +9,8 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { useEffect, useState } from "react";
+import { getCurrentUser, signIn as puterSignIn, signOut as puterSignOut } from "lib/puter.action";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -41,8 +43,71 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+// will create default auth state
+// we are telling typescript that this what kind of data have within this auth state 
+const DEFAULT_AUTH_STATE : AuthState = {
+   isSignedIn: false,
+   userName:null,
+   userId:null
+}
+
 export default function App() {
-  return <Outlet />;
+  // defining state which will aplicable within the whole application
+  const [authState,setAuthState] = useState<AuthState>(DEFAULT_AUTH_STATE)
+
+  // defining function for refreshing the auth
+  const refreshAuth = async () => {
+    try{  
+       const user = await getCurrentUser(); 
+       if(user){
+         setAuthState({
+          isSignedIn:!!user,
+          userName:user?.username || null,
+          userId:user?.uuid || null
+         })
+       }else{
+         setAuthState({
+          isSignedIn: false,
+          userName: null,
+          userId: null
+         })
+       }
+    }catch(error){
+      setAuthState(DEFAULT_AUTH_STATE)
+      return false;
+    }
+  }
+
+  // will use refreshAuth as soon we load the app simply refresh the auth so we access to most recent user
+
+  useEffect(()=>{
+    refreshAuth()
+  },[])
+
+  // new function for signIn
+  const signIn = async () => {
+     await puterSignIn()
+     // so as soon we create account we can refresh it
+     return await refreshAuth()
+  }
+
+  // and for signOut
+  const signOut = async () => {
+    await puterSignOut()
+    return await refreshAuth()
+  }
+  return (
+    <main className="min-h-screen bg-background text-foreground relative z-10">
+      <Outlet 
+        context={
+          {
+            // now we can access these functions and state from whichever page we want
+            ...authState,refreshAuth,signIn,signOut
+          }
+        }
+      />;
+    </main>
+  ) 
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
