@@ -1,0 +1,2 @@
+we are using buttons so many times its good to make a resuable component for it 
+wiil make first ui then inside it Button component
